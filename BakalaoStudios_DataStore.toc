@@ -1,0 +1,26 @@
+## Interface: 16001
+## Title: BakalaoStudios DataStore
+## Notes: Shared data of your characters for the BakalaoStudios addons (Alterao!!, Enfocao!!...): level, gold, items, mail, professions, reputations, cooldowns, lockouts.
+## Notes-esES: Datos compartidos de tus personajes para los addons de BakalaoStudios (Alterao!!, Enfocao!!...): nivel, oro, objetos, correo, profesiones, reputaciones, reutilizaciones, bandas.
+## Notes-esMX: Datos compartidos de tus personajes para los addons de BakalaoStudios (Alterao!!, Enfocao!!...): nivel, oro, objetos, correo, profesiones, reputaciones, reutilizaciones, bandas.
+## Category: Data Export
+## Author: LechuckThePirate
+## Version: 0.1.0
+## X-License: GPL-3.0
+## SavedVariables: BakalaoDataStoreDB
+
+Localization\Locale.lua
+Core\Util.lua
+Core\Compat.lua
+Core\DB.lua
+Track\Character.lua
+Track\Rested.lua
+Track\Inventory.lua
+Track\Mail.lua
+Track\Cooldowns.lua
+Track\Lockouts.lua
+Track\Reputation.lua
+Track\Attunements.lua
+Track\Resets.lua
+API.lua
+BakalaoStudios_DataStore.lua

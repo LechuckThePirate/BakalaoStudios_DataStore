@@ -97,6 +97,13 @@ local function makeAssert()
     return a
 end
 
+-- Plain Lua 5.1 (CI, busted) ignores extra arguments to xpcall; newer Lua passes them on. The local runner behaves like
+-- 5.1, so code that relies on them fails here too and not only in CI.
+if _VERSION ~= "Lua 5.1" then
+    local realXpcall = xpcall
+    xpcall = function(f, handler) return realXpcall(f, handler) end -- luacheck: ignore 121
+end
+
 local results = { passed = 0, failed = 0, pending = 0, errors = {} }
 
 local function runFile(path)

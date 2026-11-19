@@ -22,9 +22,12 @@ end
 
 -- Runs f; an error is shown the game's way (the error frame, BugSack...) but doesn't stop the caller, so a client
 -- that lacks one API only loses that one piece of information.
+-- (The arguments go through a closure: the game's xpcall passes extra arguments on, plain Lua 5.1's doesn't.)
+local unpackArgs = unpack or table.unpack -- luacheck: ignore 143
 function ns.SafeCall(f, ...)
     local handler = geterrorhandler and geterrorhandler() or print
-    return xpcall(f, handler, ...)
+    local n, args = select("#", ...), { ... }
+    return xpcall(function() return f(unpackArgs(args, 1, n)) end, handler)
 end
 
 ---------------------------------------------------------------------------------------------------

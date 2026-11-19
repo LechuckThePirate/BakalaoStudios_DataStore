@@ -56,7 +56,7 @@ end
 -- Every cooldown of the characters listed: { { key =, rec =, cd =, id = } } soonest first (ready ones first).
 function ns.Cooldowns_All(chars, alertOnly)
     local list = {}
-    for _, c in ipairs(chars or ns.Chars()) do
+    for _, c in ipairs(chars or ns.Characters()) do
         for id, cd in pairs(c.rec.cooldowns or {}) do
             if not alertOnly or cd.alert then list[#list + 1] = { key = c.key, rec = c.rec, cd = cd, id = id } end
         end

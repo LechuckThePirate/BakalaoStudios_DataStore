@@ -217,6 +217,10 @@ describe("cooldowns, lockouts, reputation, quests, resets", function()
         WowMock.cooldowns[17187] = { 900, 86400 }
         ns.Cooldowns_Scan()
         assert.are.equal(NOW + 86300, ns.Me().cooldowns.transmute.readyAt)
+        -- without a list of characters: every character
+        local all = BakalaoDataStore.Cooldowns()
+        assert.are.equal(1, #all)
+        assert.is_false(BakalaoDataStore.CooldownReady(all[1].cd))
     end)
 
     it("reads the lockouts and forgets the expired ones", function()

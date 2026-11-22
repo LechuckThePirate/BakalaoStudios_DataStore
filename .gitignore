@@ -2,3 +2,4 @@
 Thumbs.db
 *.zip
 tools/local/
+.claude/worktrees/

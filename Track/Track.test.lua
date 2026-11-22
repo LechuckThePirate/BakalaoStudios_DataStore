@@ -326,3 +326,85 @@ describe("callbacks, import and the public API", function()
         assert.are.same({}, missing)
     end)
 end)
+
+describe("when the game gives no realm name (Forever since late November 2026)", function()
+    local function old(name, extra)
+        local rec = { name = name, realm = "Realm", class = "MAGE", level = 10, money = 100, firstSeen = NOW - 1000,
+            lastSeen = NOW - 500, goldHistory = { [1] = 100 }, levels = { [10] = 50 } }
+        for k, v in pairs(extra or {}) do rec[k] = v end
+        return rec
+    end
+
+    before_each(function()
+        WowMock.Reset()
+        WowMock.char.realm = ""
+    end)
+
+    it("the playing character keeps the record it had, with its realm", function()
+        ns = LoadAddon()
+        StartAddon(ns, { chars = { ["Tester-Realm"] = old("Tester") } })
+        assert.are.equal("Tester-Realm", ns.MyKey())
+        assert.is_nil(BakalaoDataStoreDB.chars["Tester-"])
+        local rec = BakalaoDataStoreDB.chars["Tester-Realm"]
+        assert.are.equal("Realm", rec.realm)
+        assert.are.equal(123456, rec.money) -- saved now, into the old record
+        assert.are.equal(NOW - 1000, rec.firstSeen)
+        assert.are.equal(50, rec.levels[10])
+    end)
+
+    it("what was saved without the realm is merged back into the old record, the newer copy's state first", function()
+        ns = LoadAddon()
+        StartAddon(ns, { chars = {
+            ["Elsa Cacorchos-Realm"] = old("Elsa Cacorchos", { bags = { [2770] = 5 } }),
+            ["Elsa Cacorchos-"] = { name = "Elsa Cacorchos", realm = "", level = 12, money = 300, firstSeen = NOW - 100,
+                lastSeen = NOW - 50, goldHistory = { [2] = 300 }, levels = { [12] = 900 }, bags = {} },
+        } })
+        assert.is_nil(BakalaoDataStoreDB.chars["Elsa Cacorchos-"])
+        local rec = BakalaoDataStoreDB.chars["Elsa Cacorchos-Realm"]
+        assert.are.equal("Realm", rec.realm)
+        assert.are.equal(12, rec.level)
+        assert.are.equal(300, rec.money)
+        assert.are.same({}, rec.bags)
+        assert.are.equal(NOW - 1000, rec.firstSeen)
+        assert.are.same({ [1] = 100, [2] = 300 }, rec.goldHistory)
+        assert.are.same({ [10] = 50, [12] = 900 }, rec.levels)
+        assert.are.equal(2, #ns.Characters()) -- Elsa once, and the one playing
+    end)
+
+    it("two characters of the same name on two realms: no telling which, so nothing is merged", function()
+        ns = LoadAddon()
+        StartAddon(ns, { chars = {
+            ["Tester-Realm"] = old("Tester"), ["Tester-Other"] = old("Tester", { realm = "Other" }),
+        } })
+        assert.are.equal("Tester-", ns.MyKey())
+        assert.is_not_nil(BakalaoDataStoreDB.chars["Tester-Realm"])
+        assert.is_not_nil(BakalaoDataStoreDB.chars["Tester-Other"])
+    end)
+
+    it("a guild bank seen now keeps the key it had", function()
+        ns = LoadAddon()
+        StartAddon(ns, { chars = { ["Tester-Realm"] = old("Tester") },
+            guilds = { ["Los Piratas-Realm"] = { name = "Los Piratas", realm = "Realm", time = 1, tabs = {} },
+                ["Los Piratas-"] = { name = "Los Piratas", realm = "", time = 2, tabs = { [1] = { name = "T", items = { [2447] = 3 } } } } } })
+        assert.is_nil(BakalaoDataStoreDB.guilds["Los Piratas-"])
+        assert.are.equal(3, BakalaoDataStoreDB.guilds["Los Piratas-Realm"].tabs[1].items[2447])
+        WowMock.char.guild = "Los Piratas"
+        _G.GetNumGuildBankTabs = function() return 1 end
+        _G.GetGuildBankTabInfo = function() return "T", nil, true end
+        _G.GetGuildBankItemLink = function(_, slot) if slot == 5 then return "|Hitem:2447::|h[Peacebloom]|h" end end
+        _G.GetGuildBankItemInfo = function() return nil, 40 end
+        _G.GetGuildBankMoney = function() return 1000 end
+        _G.QueryGuildBankTab = function() end
+        FireEvent("GUILDBANKFRAME_OPENED")
+        assert.is_nil(BakalaoDataStoreDB.guilds["Los Piratas-"])
+        assert.are.equal(40, BakalaoDataStoreDB.guilds["Los Piratas-Realm"].tabs[1].items[2447])
+    end)
+
+    it("with the realm back, nothing changes", function()
+        WowMock.char.realm = "Realm"
+        ns = LoadAddon()
+        StartAddon(ns, { chars = { ["Tester-Realm"] = old("Tester") } })
+        assert.are.equal("Tester-Realm", ns.MyKey())
+        assert.are.equal("Realm", BakalaoDataStoreDB.chars["Tester-Realm"].realm)
+    end)
+end)

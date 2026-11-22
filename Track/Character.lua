@@ -328,7 +328,8 @@ function ns.Character_SaveBasics()
     local _, class = UnitClass("player")
     local localClass = UnitClass("player")
     local race, raceFile = UnitRace("player")
-    rec.name, rec.realm = ns.PlayerName(), ns.RealmName()
+    rec.name = ns.PlayerName()
+    if ns.RealmName() ~= "" then rec.realm = ns.RealmName() end -- (none since late November 2026: keep the one it had)
     rec.class, rec.classLocal = class, localClass
     rec.race, rec.raceFile = race, raceFile
     rec.faction = UnitFactionGroup("player")

@@ -93,14 +93,14 @@ end
 local function guildKey()
     local guild = GetGuildInfo and GetGuildInfo("player")
     if not guild then return nil end
-    return guild .. "-" .. ns.RealmName(), guild
+    return guild .. "-" .. ns.CurrentRealm(), guild
 end
 
 function ns.Inventory_SaveGuildBank()
     if not atGuildBank or not GetNumGuildBankTabs then return end
     local key, guild = guildKey()
     if not key then return end
-    local entry = ns.db.guilds[key] or { name = guild, realm = ns.RealmName(), tabs = {} }
+    local entry = ns.db.guilds[key] or { name = guild, realm = ns.CurrentRealm(), tabs = {} }
     entry.faction = UnitFactionGroup("player")
     entry.money = ns.Num(GetGuildBankMoney and GetGuildBankMoney()) or entry.money
     entry.time = ns.Now()

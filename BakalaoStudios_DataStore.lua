@@ -45,6 +45,7 @@ boot:SetScript("OnEvent", function(_, event, arg1)
     if event == "ADDON_LOADED" then
         if arg1 ~= ADDON then return end
         ns.InitDB()
+        ns.DB_MergeRealmless()
         for _, rec in pairs(ns.db.chars) do ns.Character_Repair(rec) end
         ns.Character_Init()
         ns.Inventory_Init()

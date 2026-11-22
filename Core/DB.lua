@@ -36,8 +36,92 @@ function ns.InitDB()
     })
 end
 
+---------------------------------------------------------------------------------------------------
+-- Keys when the game gives no realm. Since late November 2026 Forever answers GetRealmName() with "", so a
+-- character that was saved before as "Name-Realm" would start over as "Name-", with none of its history. While the
+-- game gives none, a character keeps the key it had (the only one of its name with a realm), and the copies saved
+-- since then are merged back into it (ns.DB_MergeRealmless, at load).
+---------------------------------------------------------------------------------------------------
+local resolved -- { name =, key = } the playing character's key while the game gives no realm
+
+-- The one key with a realm saved under that name, or nil (none, or several: two realms, no telling which).
+local function keyWithRealm(name)
+    local found
+    for key, rec in pairs(ns.db and ns.db.chars or {}) do
+        if rec.name == name and rec.realm and rec.realm ~= "" then
+            if found then return nil end
+            found = key
+        end
+    end
+    return found
+end
+
 function ns.MyKey()
-    return ns.PlayerName() .. "-" .. ns.RealmName()
+    local name, realm = ns.PlayerName(), ns.RealmName()
+    if realm ~= "" or not ns.db then return name .. "-" .. realm end
+    if resolved and resolved.name == name then return resolved.key end
+    resolved = { name = name, key = keyWithRealm(name) or (name .. "-") }
+    return resolved.key
+end
+
+-- The realm the playing character is on: the game's, or, while it gives none, the one its record was saved with.
+function ns.CurrentRealm()
+    local realm = ns.RealmName()
+    if realm ~= "" then return realm end
+    local rec = ns.db and ns.db.chars[ns.MyKey()]
+    return rec and rec.realm or ""
+end
+
+-- Joins what was saved under "Name-" (no realm) into the older record of the same character: the newer copy's
+-- state wins, the histories (gold by day, levels) are put together and the first day seen is the earliest.
+local function merge(into, from)
+    local newer = (from.lastSeen or 0) >= (into.lastSeen or 0)
+    for k, v in pairs(from) do
+        if k == "goldHistory" or k == "levels" then
+            into[k] = into[k] or {}
+            for day, value in pairs(v) do
+                if newer or into[k][day] == nil then into[k][day] = value end
+            end
+        elseif k == "firstSeen" then
+            into.firstSeen = math.min(into.firstSeen or v, v)
+        elseif k ~= "name" and k ~= "realm" and (newer or into[k] == nil) then
+            into[k] = v
+        end
+    end
+end
+
+function ns.DB_MergeRealmless()
+    local merged = 0
+    for key, rec in pairs(ns.db.chars) do
+        if (rec.realm == nil or rec.realm == "") and key == (rec.name or "") .. "-" then
+            local target = rec.name and keyWithRealm(rec.name)
+            if target then
+                merge(ns.db.chars[target], rec)
+                ns.db.chars[key] = nil
+                merged = merged + 1
+            end
+        end
+    end
+    for key, guild in pairs(ns.db.guilds) do
+        if (guild.realm == nil or guild.realm == "") and key == (guild.name or "") .. "-" then
+            local target
+            for otherKey, other in pairs(ns.db.guilds) do
+                if other.name == guild.name and other.realm and other.realm ~= "" then
+                    if target then target = nil break end
+                    target = otherKey
+                end
+            end
+            if target and (guild.time or 0) >= (ns.db.guilds[target].time or 0) then
+                guild.realm = ns.db.guilds[target].realm
+                ns.db.guilds[target] = guild
+                ns.db.guilds[key] = nil
+            elseif target then
+                ns.db.guilds[key] = nil
+            end
+        end
+    end
+    resolved = nil
+    return merged
 end
 
 -- The playing character's record (created the first time).
@@ -45,7 +129,7 @@ function ns.Me()
     local key = ns.MyKey()
     local rec = ns.db.chars[key]
     if not rec then
-        rec = { name = ns.PlayerName(), realm = ns.RealmName(), firstSeen = ns.Now() }
+        rec = { name = ns.PlayerName(), realm = ns.CurrentRealm(), firstSeen = ns.Now() }
         ns.db.chars[key] = rec
     end
     return rec
